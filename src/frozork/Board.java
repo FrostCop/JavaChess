@@ -54,6 +54,6 @@ public class Board {
 	}
 	
 	private Cell[][] cells;
-	private final int width = 8;
-	private final int height = 8;
+	public static final int width = 8;
+	public static final int height = 8;
 }
