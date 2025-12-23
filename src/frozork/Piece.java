@@ -1,6 +1,10 @@
 package frozork;
 
 public abstract class Piece {
+	public Piece(boolean isWhite) {
+		this.isWhite = isWhite;
+		this.hasMoved = false;
+	}
 	
 	/*public abstract List<Move> pseudoLegalMoves(Board, currentPosition) {
 		
