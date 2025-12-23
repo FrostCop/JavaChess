@@ -12,6 +12,6 @@ public abstract class Piece {
 	
 	public abstract void print();
 	
-	private boolean isWhite;
+	protected boolean isWhite;
 	private boolean hasMoved;
 }
