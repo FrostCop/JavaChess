@@ -1,5 +1,7 @@
 package frozork;
 
+import java.util.List;
+
 public class Board {
 	public Board() {
 		cells = new Cell[width][height];
@@ -45,12 +47,38 @@ public class Board {
 	}
 	
 	public void print() {
+		System.out.print("  ");
+		for(int i = 0; i < width; i++) 
+			System.out.print(i + " ");
+		System.out.println();
+		
 		for(int i = 0; i < width; i++) {
+			System.out.print(i + " ");
 			for(int j = 0; j < height; j++) {
 				cells[i][j].print((i + j) % 2 == 0);
 			}
 			System.out.println();
 		}
+	}
+	
+	public void printLegalMoves() {
+		for(int i = 0; i < width; i++) {
+			for(int j = 0; j < height; j++) {
+				if(cells[i][j].getPiece() == null) continue;
+				
+				System.out.println("Legal moves for piece " + i + " " + j + ":");
+				List<Coord> moves = cells[i][j].getPiece().pseudoLegalMoves(this, new Coord(i, j));
+				if(moves == null) continue;
+				
+				for(Coord m : moves) {
+					System.out.println("(" + m.i + ", " + m.j + ")");
+				}
+			}
+		}
+	}
+	
+	public boolean empty(Coord coord) {
+		return cells[coord.i][coord.j].getPiece() == null;
 	}
 	
 	private Cell[][] cells;

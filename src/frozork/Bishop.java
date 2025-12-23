@@ -11,7 +11,7 @@ public class Bishop extends Piece {
 
 	@Override
 	public void print() {
-		System.out.print(isWhite ? "♗" : "♝");
+		System.out.print(isWhite ? "B" : "b");
 	}
 
 	@Override
@@ -19,33 +19,30 @@ public class Bishop extends Piece {
 		ArrayList<Coord> result = new ArrayList<Coord>();
 		
 		for (Coord temp = new Coord(from.i+1, from.j+1); 
-				temp.isValid(); 
+				temp.isValid() && board.empty(temp); 
 				++temp.i, ++temp.j) {
 			result.add(temp.clone());
 		}
 		
 		for (Coord temp = new Coord(from.i-1, from.j-1); 
-				temp.isValid(); 
+				temp.isValid() && board.empty(temp); 
 				--temp.i, --temp.j) {
 			result.add(temp.clone());
 		}
 		
 		for (Coord temp = new Coord(from.i+1, from.j-1); 
-				temp.isValid(); 
+				temp.isValid() && board.empty(temp); 
 				++temp.i, --temp.j) {
 			result.add(temp.clone());
 		}
 		
 		for (Coord temp = new Coord(from.i-1, from.j+1); 
-				temp.isValid(); 
+				temp.isValid() && board.empty(temp); 
 				--temp.i, ++temp.j) {
 			result.add(temp.clone());
 		}
 		
-		
-		
-		
-		
+		return result;
 	}
 	
 	

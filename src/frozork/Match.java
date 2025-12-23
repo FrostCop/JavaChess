@@ -16,6 +16,10 @@ public class Match {
 		System.out.println("Turn: " + (currentTurn ? "black" : "white"));
 	}
 	
+	public void printLegalMoves() {
+		board.printLegalMoves();
+	}
+	
 	private Board board;
 	private int currentMove;
 	private boolean currentTurn;	// false white true black

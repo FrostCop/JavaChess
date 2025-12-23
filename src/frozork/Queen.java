@@ -1,5 +1,7 @@
 package frozork;
 
+import java.util.List;
+
 public class Queen extends Piece{
 	public Queen(boolean isWhite) {
 		super(isWhite);
@@ -7,6 +9,11 @@ public class Queen extends Piece{
 	
 	@Override
 	public void print() {
-		System.out.print(isWhite ? "♕" : "♛");
+		System.out.print(isWhite ? "Q" : "q");
+	}
+	
+	@Override
+	public List<Coord> pseudoLegalMoves(Board board, Coord from) {
+		return null;
 	}
 }

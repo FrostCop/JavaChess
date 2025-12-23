@@ -7,6 +7,9 @@ public class Main {
 		
 		Match match = new Match();
 		match.print();
+		
+		System.out.println();
+		match.printLegalMoves();
 	}
 
 }
