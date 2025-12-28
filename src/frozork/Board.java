@@ -3,6 +3,8 @@ package frozork;
 import java.util.List;
 
 public class Board {
+	
+	//Constructor
 	public Board() {
 		cells = new Cell[width][height];
 		for(int i = 0; i < width; i++) {
@@ -46,6 +48,8 @@ public class Board {
 		cells[6][7].setPiece(new Pawn(true));
 	}
 	
+	
+	//I-O and Methods
 	public void print() {
 		System.out.print("  ");
 		for(int i = 0; i < width; i++) 
@@ -62,6 +66,7 @@ public class Board {
 	}
 	
 	public void printLegalMoves() {
+		System.out.println("Row, column");
 		for(int i = 0; i < width; i++) {
 			for(int j = 0; j < height; j++) {
 				if(cells[i][j].getPiece() == null) continue;
@@ -77,10 +82,17 @@ public class Board {
 		}
 	}
 	
+	
 	public boolean empty(Coord coord) {
 		return cells[coord.i][coord.j].getPiece() == null;
 	}
 	
+	public Piece getPiece(Coord coord) {
+		return cells[coord.i][coord.j].getPiece();
+	}
+	
+	
+	//Instance variables
 	private Cell[][] cells;
 	public static final int width = 8;
 	public static final int height = 8;
