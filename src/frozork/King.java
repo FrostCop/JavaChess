@@ -15,38 +15,110 @@ public class King extends Piece{
 	
 	@Override
 	public List<Coord> pseudoLegalMoves(Board board, Coord from) {
-ArrayList<Coord> result  = new ArrayList<>();
+		ArrayList<Coord> result  = new ArrayList<>();
 		
 		//Search right
-		for (Coord temp = new Coord(from.i, from.j+1); 
-				temp.isValid() && board.empty(temp); 
-				++temp.j) {
-			result.add(temp.clone());
-			break;
+		Coord temp = new Coord(from.i, from.j+1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
 		}
 		
 		//Search left
-		for (Coord temp = new Coord(from.i, from.j-1); 
-				temp.isValid() && board.empty(temp); 
-				--temp.j) {
-			result.add(temp.clone());
-			break;
+		temp = new Coord(from.i, from.j-1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
 		}
 		
 		//Search up
-		for (Coord temp = new Coord(from.i+1, from.j); 
-				temp.isValid() && board.empty(temp); 
-				++temp.i) {
-			result.add(temp.clone());
-			break;
+		temp = new Coord(from.i+1, from.j);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
 		}
 		
 		//Search down
-		for (Coord temp = new Coord(from.i+-1, from.j); 
-				temp.isValid() && board.empty(temp); 
-				--temp.i) {
-			result.add(temp.clone());
-			break;
+		temp = new Coord(from.i-1, from.j);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
+		}
+		
+		//Search up right
+		temp = new Coord(from.i+1, from.j+1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
+		}
+		
+		//Search up left
+		temp = new Coord(from.i+1, from.j-1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
+		}
+		
+		//Search down left
+		temp = new Coord(from.i-1, from.j-1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
+		}
+		
+		//Search down right
+		temp = new Coord(from.i-1, from.j-1);
+		if (temp.isValid()) {
+			if (board.empty(temp)) {
+				result.add(temp.clone());
+			}
+			else {
+				if (board.getPiece(temp).isWhite != this.isWhite) {
+					result.add(temp.clone());
+				}
+			}
 		}
 		
 		return result;
