@@ -1,0 +1,13 @@
+Every message is a String composed as such:
+OP|DATA
+
+Commands:
+ROOMS_INFO|Room0Name|Room0ConnectionsCount|Room1Name|Room1ConnectionsCount|...	// Sent by the server to the client with all the rooms
+
+CREATE|RoomName
+CREATE_SUCC|RoomName
+CREATE_FAIL|RoomName|Reason
+
+JOIN|RoomName
+JOIN_SUCC|RoomName
+JOIN_FAIL|RoomName|Reason

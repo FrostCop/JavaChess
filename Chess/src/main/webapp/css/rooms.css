@@ -1,0 +1,76 @@
+p {
+	margin: 0px;
+}
+
+.section {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+/* Section Title */
+#title {
+	padding: 10px;
+	margin: 0px;
+}
+
+/* Section Create */
+#section-create {
+	padding: 10px;
+	
+	flex-direction: column;
+	gap: 10px;
+}
+#create-submit {
+	height: 30px;
+}
+
+/* Section Feedback */
+#feedback {
+	display: none;
+	
+	text-align: center;
+	font-style: italic;
+}
+
+/* Section Room List */
+#section-room-list {
+	padding: 10px;
+}
+
+#room-list {
+	width: 300px;
+	
+	border-style: solid;
+	border-width: 1px;
+}
+
+.room-list-entry {
+	height: 30px;
+	
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	
+	border-style: solid;
+	border-width: 1px;
+}
+.room-list-entry-name {
+	width: 100%;
+	padding: 10px;
+}
+.room-list-entry-join {
+	margin: 7px;
+}
+.room-list-entry-occupation-container {
+	height: 100%;
+	
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	
+	border-style: solid;
+	border-width: 1px;
+}.room-list-entry-occupation{
+	padding: 5px;
+}
