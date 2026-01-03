@@ -44,4 +44,8 @@ public class Room {
     	return new LeaveResult(true, null);
     }
     public record LeaveResult(boolean success, String failureInfo) { }
+    
+    public static boolean isValidRoomName(String roomName) {
+        return roomName != null && !roomName.isBlank();
+    }
 }

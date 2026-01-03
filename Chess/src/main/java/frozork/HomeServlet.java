@@ -21,7 +21,7 @@ public class HomeServlet extends HttpServlet {
 		resp.setContentType("text/html");
         
 		// With request dispatcher I can forward resources (even servlet paths)
-		RequestDispatcher view = req.getRequestDispatcher("/rooms.html");
+		RequestDispatcher view = req.getRequestDispatcher("/index.html");
 		view.forward(req, resp);
 	}
 }

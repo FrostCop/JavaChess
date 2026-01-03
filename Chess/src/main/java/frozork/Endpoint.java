@@ -1,9 +1,9 @@
 package frozork;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import jakarta.websocket.OnClose;
@@ -25,12 +25,16 @@ public class Endpoint {
 	private static final String OP_JOIN_ROOM_SUCCESS = "JOIN_SUCC";
 	private static final String OP_JOIN_ROOM_FAILURE = "JOIN_FAIL";
 
+	private static final String OP_LEAVE_ROOM = "LEAVE";
+	private static final String OP_LEAVE_ROOM_SUCCESS = "LEAVE_SUCC";
+	private static final String OP_LEAVE_ROOM_FAILURE = "LEAVE_FAIL";
+	
 	private static final int MAX_ROOMS = 10;
 
     private static Set<Endpoint> connections = new CopyOnWriteArraySet<>();
     // The room name serves as an id of the room
 	// No need of ConcurrentHashMap	because I protect it customly with synchronized(rooms)
-    private static Map<String, Room> rooms = new ConcurrentHashMap<String, Room>();	
+    private static Map<String, Room> rooms = new HashMap<String, Room>();	
 	
 	private Session session;
 	
@@ -62,106 +66,38 @@ public class Endpoint {
 				}
 			}
 		}
+		
 		// If the client left the room we broadcast the new roomInfo
-        broadcast(getRoomsInfoMessage());		
+        if(leftARoom)
+        	broadcast(getRoomsInfoMessage());		
 	}
 
 	@OnMessage
 	public void receive(String message) {
-		System.out.println("Received message: " + message);
+		System.out.println("Received Message: " + message);
 		
 		String[] tokens = message.split("[|]");
 
+		if(tokens.length < 1) return;
 		String op = tokens[0];
+		
+		// Room Op
+		if(tokens.length < 2) return;
+		RoomOpOutcome roomOpOutcome = null;
 		switch(op) 
 		{
 		case OP_CREATE_ROOM:
-			handleCreateRoom(tokens[1]);
+			roomOpOutcome = handleCreateRoom(tokens[1]);
 			break;
 		case OP_JOIN_ROOM:
-			handleJoinRoom(tokens[1]);
+			roomOpOutcome = handleJoinLeaveRoom(tokens[1], true);
+			break;
+		case OP_LEAVE_ROOM:
+			roomOpOutcome = handleJoinLeaveRoom(tokens[1], false);
 			break;
 		}
-	}
-
-	private void handleCreateRoom(String roomName) {
-		String response;
-		String broadcastMessage = null; // populated optionally in the syncrhonized(rooms) but called at the end (broadcasting in syncrhonized is unecessary performance hit)
-		
-		if(roomName.isBlank()) {
-			// Room name is not valid
-			response = OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Invalid room name";
-		}
-		else {
-			synchronized (rooms) {
-				if(rooms.containsKey(roomName)) {
-					// A room with that name already exists
-					response = OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Room already exists";
-				}
-				else if(rooms.size() >= MAX_ROOMS) {
-					// Rooms are at maximum number
-					response = OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Max rooms reached";
-				}
-				else {
-					// We create the room
-					response = OP_CREATE_ROOM_SUCESS + "|" + roomName;
-					rooms.put(roomName, new Room(roomName));
-
-					broadcastMessage = getRoomsInfoMessage();	// We will broadcast the new room info
-				}
-			}
-		}
-
-		send(this, response);	// I send the response to the client that just received the message
-		
-		// If the broadcast message was populated (new room created) we broadcast
-		if (broadcastMessage != null) {
-            broadcast(broadcastMessage);
-        }
-	}
-	
-	private void handleJoinRoom(String roomName) {		
-		String response;
-		String broadcastMessage = null;
-
-		if(roomName.isBlank()) {
-			// Room name is not valid
-			response = OP_JOIN_ROOM_FAILURE + "|" + roomName + "|" + "Invalid room name";
-		}
-		else {            
-			// Minimal lock scope: We only lock to FIND the room.
-			Room roomToJoin = null;
-			synchronized (rooms) {
-                roomToJoin = rooms.get(roomName);
-            }
-			
-			if(roomToJoin == null) {
-				// A room with that name does not exist
-				response = OP_JOIN_ROOM_FAILURE + "|" + roomName + "|" + "Room does not exist";
-			}
-			else {
-				// We attempt to join the room
-				Room.JoinResult joinResult = roomToJoin.attemptJoin(this);
-				
-				if(!joinResult.success()) {
-					// We failed to join
-					response = OP_JOIN_ROOM_FAILURE + "|" + roomName + "|" + joinResult.failureInfo();
-				}
-				else {
-					// We joined the room
-					response = OP_JOIN_ROOM_SUCCESS + "|" + roomName;
-					
-					broadcastMessage = getRoomsInfoMessage();	// We will broadcast the new room info (connectionsCount) changed for the joined room)
-				}
-			}
-		}
-
-		send(this, response);	// I send the response to the client that just received the message
-		
-		// If the broadcast message was populated (join success)
-		if (broadcastMessage != null) {
-            broadcast(broadcastMessage);
-        }
+		if(roomOpOutcome != null)
+			roomOpRespond(roomOpOutcome);
 	}
 	
 	@OnError
@@ -169,6 +105,75 @@ public class Endpoint {
 		System.err.println("Error");
 		t.printStackTrace();
 	}
+	
+	// Rooms Operations
+	
+	private RoomOpOutcome handleCreateRoom(String roomName) {
+        if (!Room.isValidRoomName(roomName)) {
+            return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Invalid room name");
+        }
+
+        synchronized (rooms) {
+            if (rooms.containsKey(roomName)) {
+                return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Room already exists");
+            }
+            if (rooms.size() >= MAX_ROOMS) {
+                return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Max rooms reached");
+            }
+
+            rooms.put(roomName, new Room(roomName));
+            return roomOpOk(OP_CREATE_ROOM_SUCESS, roomName, true);
+        }
+    }
+    private RoomOpOutcome handleJoinLeaveRoom(String roomName, boolean join) {
+        final String opFail = join ? OP_JOIN_ROOM_FAILURE : OP_LEAVE_ROOM_FAILURE;
+        final String opSucc = join ? OP_JOIN_ROOM_SUCCESS : OP_LEAVE_ROOM_SUCCESS;
+
+        if (!Room.isValidRoomName(roomName)) {
+            return roomOpFail(opFail, roomName, "Invalid room name");
+        }
+
+        // Minimal lock scope: only lock to FIND the room.
+        final Room room;
+        synchronized (rooms) {
+            room = rooms.get(roomName);
+        }
+
+        if (room == null) {
+            return roomOpFail(opFail, roomName, "Room does not exist");
+        }
+
+        if (join) {
+            Room.JoinResult joinResult = room.attemptJoin(this);
+            if (!joinResult.success()) {
+                return roomOpFail(opFail, roomName, joinResult.failureInfo());
+            }
+            return roomOpOk(opSucc, roomName, true);
+        } else {
+            Room.LeaveResult leaveResult = room.attemptLeave(this);
+            if (!leaveResult.success()) {
+                return roomOpFail(opFail, roomName, leaveResult.failureInfo());
+            }
+            return roomOpOk(opSucc, roomName, true);
+        }
+    }
+    
+    private record RoomOpOutcome(String response, boolean broadcastRoomsInfo) { }
+    
+    private RoomOpOutcome roomOpOk(String opSuccess, String roomName, boolean broadcastRoomsInfo) {
+        return new RoomOpOutcome(opSuccess + "|" + roomName, broadcastRoomsInfo);
+    }
+    
+    private RoomOpOutcome roomOpFail(String opFailure, String roomName, String reason) {
+        return new RoomOpOutcome(opFailure + "|" + roomName + "|" + reason, false);
+    }
+    
+    private void roomOpRespond(RoomOpOutcome outcome) {
+        send(this, outcome.response());
+        if (outcome.broadcastRoomsInfo()) {
+            broadcast(getRoomsInfoMessage());
+        }
+    }
 
 	/**
 	 * Composes the rooms info message
@@ -183,6 +188,8 @@ public class Endpoint {
 		
 		return message;
 	}
+	
+	// Helpers
 	
 	/**
 	 * Sends a message to all clients
@@ -206,9 +213,10 @@ public class Endpoint {
 	            try {
 	                target.getSession().close();
 	            } catch (IOException e1) { }
-	        }
-		
+	        }		
 		}
+		
+		System.out.println("Sending Message: " + message);
 	}
 	
 	public Session getSession() {

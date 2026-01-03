@@ -11,6 +11,10 @@ const OP_JOIN_ROOM = "JOIN";
 const OP_JOIN_ROOM_SUCCESS = "JOIN_SUCC";
 const OP_JOIN_ROOM_FAILURE = "JOIN_FAIL";
 
+const OP_LEAVE_ROOM = "LEAVE";
+const OP_LEAVE_ROOM_SUCCESS = "LEAVE_SUCC";
+const OP_LEAVE_ROOM_FAILURE = "LEAVE_FAIL";
+
 function clearRoomList() {
 	let roomList = document.getElementById("room-list");
 	roomList.textContent = "";	// We remove all the childs
@@ -33,7 +37,7 @@ function makeRoomListEntry(name, connectionsCount) {
 	roomListEntry.appendChild(roomOccupationContainer);
 	let roomJoin = document.createElement("button");
 	roomJoin.className = "room-list-entry-join";
-	roomJoin.onclick = () => rooms.sendJoinMessage(name);
+	roomJoin.onclick = () => endpoint.sendJoinMessage(name);
 	let roomJoinLabel = document.createElement("p");
 	roomJoinLabel.className = "room-list-entry-join-label";
 	roomJoinLabel.innerHTML = "Join";
@@ -54,7 +58,29 @@ function setFeedback(feedback) {
 	}
 }
 
-var rooms = {
+function setView(toRoomsView) {
+	let roomsView = document.getElementById("view-rooms");
+	let gameView = document.getElementById("view-game");
+	
+	roomsView.style.display = (toRoomsView ? "block" : "none");
+	gameView.style.display = (toRoomsView ? "none" : "block");
+}
+
+function init() {
+	// Create Event
+	document.getElementById("create-submit").onclick = function() {
+		var createNameElement = document.getElementById("create-name");
+		if(createNameElement.value.length > 0) endpoint.sendCreateMessage(createNameElement.value);
+		createNameElement.value = "";
+	}
+}
+
+function deInit() {
+	// Remove Create Event
+	document.getElementById("create-submit").onclick = null;
+}
+
+var endpoint = {
 
     socket: null,
 
@@ -65,27 +91,23 @@ var rooms = {
         this.socket.onopen = function() {
 			console.log("Socket Opened");
 			
-			// Create Event
-            document.getElementById("create-submit").onclick = function() {
-				var createNameElement = document.getElementById("create-name");
-				rooms.sendCreateMessage(createNameElement.value);
-				createNameElement.value = "";
-			}
+			init();
         }
 
         this.socket.onclose = function() {
 			console.log("Socket Closed");
-
-			// Remove Create Event
-			document.getElementById("create-submit").onclick = null;
+			
+			deInit();
         }
 
         this.socket.onmessage = function(message) {
-			console.log("Socket Message " + message.data);
+			console.log("Received Message " + message.data);
 			
 			const tokens = message.data.split("|");
 			
 			let op = tokens[0];
+			
+			// Room Op
 			let failRoomName;
 			let failReason;
 			let successRoomName;
@@ -122,18 +144,25 @@ var rooms = {
 			case OP_JOIN_ROOM_SUCCESS:
 				successRoomName = tokens[1];				
 				setFeedback("Join success of room \"" + successRoomName + "\"");
+				
+				setView(false);
 				break;
 			}
         }
     },
 
-	sendCreateMessage: function(roomName) {
-		rooms.socket.send(OP_CREATE_ROOM + "|" + roomName);
+	send: function(message) {
+		console.log("Sending Message " + message);
+		
+		endpoint.socket.send(message);
 	},
 	
+	sendCreateMessage: function(roomName) {
+		this.send(OP_CREATE_ROOM + "|" + roomName);
+	},	
 	sendJoinMessage: function(roomName) {
-		rooms.socket.send(OP_JOIN_ROOM + "|" + roomName);
+		this.send(OP_JOIN_ROOM + "|" + roomName);
 	}
 }
 
-rooms.connect(WEBSOCKET_HOST);
+endpoint.connect(WEBSOCKET_HOST);

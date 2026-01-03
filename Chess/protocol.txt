@@ -11,3 +11,7 @@ CREATE_FAIL|RoomName|Reason
 JOIN|RoomName
 JOIN_SUCC|RoomName
 JOIN_FAIL|RoomName|Reason
+
+LEAVE|RoomName
+LEAVE_SUCC|RoomName
+LEAVE_FAIL|RoomName|Reason
