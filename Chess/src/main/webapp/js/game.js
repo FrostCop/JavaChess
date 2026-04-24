@@ -6,6 +6,10 @@
 const WEBSOCKET_HOST = "ws://127.0.0.1:8080/Chess/websocket/server"
 //const WEBSOCKET_HOST = "ws://147.53.255.127:8080/Chess/websocket/server"
 
+const OP_USER_INFO = "USER_INFO";
+const OP_USER_INFO_SUCC = "USER_INFO_SUCC";
+const OP_USER_INFO_FAIL = "USER_INFO_FAIL";
+
 const OP_ROOMS_INFO = "ROOMS_INFO";
 
 const OP_CREATE_ROOM = "CREATE";
@@ -21,18 +25,28 @@ const OP_LEAVE_ROOM_SUCCESS = "LEAVE_SUCC";
 const OP_LEAVE_ROOM_FAILURE = "LEAVE_FAIL";
 
 // View
+const VIEWS = ["nickname", "rooms", "match"];
 var view = {
-	init: function(){		
-		// Create Event
-		document.getElementById("create-submit").onclick = function() {
-			var createNameElement = document.getElementById("create-name");
+	currentView: "nickname",
+	
+	init: function(){
+		// Nickname Insert Event
+		document.getElementById("nickname-submit-button").onclick = function() {
+			let nicknameInputElement = document.getElementById("nickname-insert-input");
+			if(nicknameInputElement.value.length > 0) endpoint.sendUserInfoMessage(nicknameInputElement.value);			
+			nicknameInputElement.value = "";
+		}
+		
+		// Rooms Create Event
+		document.getElementById("rooms-create-submit").onclick = function() {
+			let createNameElement = document.getElementById("rooms-create-name");
 			if(createNameElement.value.length > 0) endpoint.sendCreateMessage(createNameElement.value);			
 			createNameElement.value = "";
 		}
 	},
 	
 	clearRoomList: function(){
-		let roomList = document.getElementById("room-list");
+		let roomList = document.getElementById("room-list-inner");
 		roomList.textContent = "";	// We remove all the childs
 	},
 	
@@ -62,11 +76,21 @@ var view = {
 		roomListEntry.appendChild(roomJoin);
 
 		
-		document.getElementById("room-list").appendChild(roomListEntry);
+		document.getElementById("room-list-inner").appendChild(roomListEntry);
 	},
 
 	setFeedback: function(feedback) {
-		let feedbackElement = document.getElementById("feedback");
+		let feedbackElement = null;
+		if(view.currentView == "nickname") {
+			feedbackElement = document.getElementById("nickname-feedback-text");				
+		}
+		else if(view.currentView == "rooms") {
+			feedbackElement = document.getElementById("rooms-feedback-text");	
+		}
+		else {
+			throw new Error("Can't set feedback in a view that doesn't have feedback text");
+		}
+		
 		if(feedback == "")
 			feedbackElement.style.display = "none";
 		else {
@@ -75,16 +99,23 @@ var view = {
 		}
 	},
 
-	switch: function(toRoomsView) {
-		let roomsView = document.getElementById("view-rooms");
-		let gameView = document.getElementById("view-game");
+	setCurrentView: function(view) {
+		if(!VIEWS.includes(view)) throw new Error("View " + view + " does not exist");
 		
-		roomsView.style.display = (toRoomsView ? "flex" : "none");
-		gameView.style.display = (toRoomsView ? "none" : "flex");
+		for(let i = 0; i < VIEWS.length; i++) {
+			let element = document.getElementById(VIEWS[i]);
+			if(VIEWS[i] == view) {
+				element.style.display = "flex";
+			}
+			else {
+				element.style.display = "none";				
+			}
+		}
+		this.currentView = view;
 	},
 
 	setJoinedRoomInfo: function(room) {
-		document.getElementById("room-name").innerHTML = "Room - " + room.name;
+		document.getElementById("match-info-name").innerHTML = "Room - " + room.name;
 	}
 }
 
@@ -97,14 +128,21 @@ class Room {
 }
 
 var state = {
+	nickname: null,
 	rooms: [],
 	joinedRoomName: null,
 	
 	init: function() {
+		this.nickname = null;
 		this.rooms = [];
 		this.joinedRoomName = null;
 	},
 	
+	setUserInfo: function(nickname) {
+		this.nickname = nickname;
+		view.setCurrentView("rooms");
+	},
+		
 	clearRooms: function() {
 		this.rooms = [];
 		view.clearRoomList();
@@ -127,7 +165,7 @@ var state = {
 		
 		this.joinedRoomName = roomName;
 		view.setJoinedRoomInfo(foundRoom);
-		view.switch(false);
+		view.setCurrentView("match");
 	}
 }
 
@@ -156,9 +194,15 @@ var endpoint = {
 			
 			let op = tokens[0];
 			
-			// Room Op
+			// Op
 			switch(op) 
 			{
+			case OP_USER_INFO_FAIL:
+				endpoint.handleUserInfoFailure(tokens[1], tokens[2]);
+				break;
+			case OP_USER_INFO_SUCC:
+				endpoint.handleUserInfoSuccess(tokens[1]);
+				break;
 			case OP_ROOMS_INFO:
 				let rooms = [];
 				for(let t = 1; t + 1 < tokens.length; t += 2) // Foreach token after the first
@@ -180,21 +224,31 @@ var endpoint = {
 			}
         }
     },
+	showMessageFeedback: function(feedback) {
+		view.setFeedback(feedback);	// The only direct comunication endpoint -> view is here
+	},
 
+	handleUserInfoFailure: function(nickname, reason) {
+		endpoint.showMessageFeedback("User Info failure of nickname \"" + nickname + "\" because<br>" + reason);
+	},
+	handleUserInfoSuccess: function(nickname) {
+		endpoint.showMessageFeedback("User Info success of nickname \"" + nickname + "\"");
+		state.setUserInfo(nickname);
+	},
 	handleRoomsInfo: function(rooms) {
 		state.setRooms(rooms);
 	},
 	handleCreateRoomFailure: function(roomName, reason) {
-		view.setFeedback("Creation failure of room \"" + roomName  + "\" because<br>" + reason);	
+		endpoint.showMessageFeedback("Creation failure of room \"" + roomName  + "\" because<br>" + reason);	
 	},
 	handleCreateRoomSuccess: function(roomName) {
-		view.setFeedback("Creation success of room \"" + roomName + "\"");
+		endpoint.showMessageFeedback("Creation success of room \"" + roomName + "\"");
 	},
 	handleJoinRoomFailure: function(roomName, reason) {
-		view.setFeedback("Join failure of room \"" + roomName  + "\" because<br>" + reason);
+		endpoint.showMessageFeedback("Join failure of room \"" + roomName  + "\" because<br>" + reason);
 	},
 	handleJoinRoomSuccess: function(roomName) {
-		view.setFeedback("Join success of room \"" + roomName + "\"");
+		endpoint.showMessageFeedback("Join success of room \"" + roomName + "\"");
 		state.joinRoom(roomName);
 	},
 	
@@ -211,7 +265,10 @@ var endpoint = {
 		console.log("Socket Send Message " + message);		
 		endpoint.socket.send(message);
 		return true;
-	},	
+	},
+	sendUserInfoMessage: function(nickname) {
+		this.send(OP_USER_INFO + "|" + nickname);
+	},
 	sendCreateMessage: function(roomName) {
 		this.send(OP_CREATE_ROOM + "|" + roomName);
 	},	

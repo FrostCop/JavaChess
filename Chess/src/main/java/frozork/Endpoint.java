@@ -13,8 +13,15 @@ import jakarta.websocket.OnOpen;
 import jakarta.websocket.Session;
 import jakarta.websocket.server.ServerEndpoint;
 
+/**
+ * Each instance of this class is a client/user/connection
+ */
 @ServerEndpoint(value = "/websocket/server")
 public class Endpoint {
+	private static final String OP_USER_INFO = "USER_INFO";
+	private static final String OP_USER_INFO_SUCC = "USER_INFO_SUCC";
+	private static final String OP_USER_INFO_FAIL = "USER_INFO_FAIL";
+	
 	private static final String OP_ROOMS_INFO = "ROOMS_INFO";
 	
 	private static final String OP_CREATE_ROOM = "CREATE";
@@ -37,6 +44,7 @@ public class Endpoint {
     private static Map<String, Room> rooms = new HashMap<String, Room>();	
 	
 	private Session session;
+	private String nickname;
 	
 	@OnOpen
 	public void start(Session session) {
@@ -81,23 +89,26 @@ public class Endpoint {
 		if(tokens.length < 1) return;
 		String op = tokens[0];
 		
-		// Room Op
+		// Op
 		if(tokens.length < 2) return;
-		RoomOpOutcome roomOpOutcome = null;
+		OpOutcome opOutcome = null;
 		switch(op) 
 		{
+		case OP_USER_INFO:
+			opOutcome = handleUserInfo(tokens[1]);
+			break;
 		case OP_CREATE_ROOM:
-			roomOpOutcome = handleCreateRoom(tokens[1]);
+			opOutcome = handleCreateRoom(tokens[1]);
 			break;
 		case OP_JOIN_ROOM:
-			roomOpOutcome = handleJoinLeaveRoom(tokens[1], true);
+			opOutcome = handleJoinLeaveRoom(tokens[1], true);
 			break;
 		case OP_LEAVE_ROOM:
-			roomOpOutcome = handleJoinLeaveRoom(tokens[1], false);
+			opOutcome = handleJoinLeaveRoom(tokens[1], false);
 			break;
 		}
-		if(roomOpOutcome != null)
-			roomOpRespond(roomOpOutcome);
+		if(opOutcome != null)
+			opRespond(opOutcome);
 	}
 	
 	@OnError
@@ -106,9 +117,17 @@ public class Endpoint {
 		t.printStackTrace();
 	}
 	
-	// Rooms Operations
-	
-	private RoomOpOutcome handleCreateRoom(String roomName) {
+	// Ops
+	private OpOutcome handleUserInfo(String nickname) {
+        if (!isValidNickname(nickname)) {
+        		return new OpOutcome(OP_USER_INFO_FAIL + "|" + nickname + "|" + "Nickname is not valid", false);
+        }
+
+        this.nickname = nickname;
+		return new OpOutcome(OP_USER_INFO_SUCC + "|" + nickname, false);
+    }
+
+	private OpOutcome handleCreateRoom(String roomName) {
         if (!Room.isValidRoomName(roomName)) {
             return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Invalid room name");
         }
@@ -122,10 +141,11 @@ public class Endpoint {
             }
 
             rooms.put(roomName, new Room(roomName));
-            return roomOpOk(OP_CREATE_ROOM_SUCESS, roomName, true);
+            return roomOpOk(OP_CREATE_ROOM_SUCESS, roomName);
         }
     }
-    private RoomOpOutcome handleJoinLeaveRoom(String roomName, boolean join) {
+	
+    private OpOutcome handleJoinLeaveRoom(String roomName, boolean join) {
         final String opFail = join ? OP_JOIN_ROOM_FAILURE : OP_LEAVE_ROOM_FAILURE;
         final String opSucc = join ? OP_JOIN_ROOM_SUCCESS : OP_LEAVE_ROOM_SUCCESS;
 
@@ -148,27 +168,27 @@ public class Endpoint {
             if (!joinResult.success()) {
                 return roomOpFail(opFail, roomName, joinResult.failureInfo());
             }
-            return roomOpOk(opSucc, roomName, true);
+            return roomOpOk(opSucc, roomName);
         } else {
             Room.LeaveResult leaveResult = room.attemptLeave(this);
             if (!leaveResult.success()) {
                 return roomOpFail(opFail, roomName, leaveResult.failureInfo());
             }
-            return roomOpOk(opSucc, roomName, true);
+            return roomOpOk(opSucc, roomName);
         }
     }
     
-    private record RoomOpOutcome(String response, boolean broadcastRoomsInfo) { }
+    private record OpOutcome(String response, boolean broadcastRoomsInfo) { }
     
-    private RoomOpOutcome roomOpOk(String opSuccess, String roomName, boolean broadcastRoomsInfo) {
-        return new RoomOpOutcome(opSuccess + "|" + roomName, broadcastRoomsInfo);
+    private OpOutcome roomOpOk(String opSuccess, String roomName) {
+        return new OpOutcome(opSuccess + "|" + roomName, true);
     }
     
-    private RoomOpOutcome roomOpFail(String opFailure, String roomName, String reason) {
-        return new RoomOpOutcome(opFailure + "|" + roomName + "|" + reason, false);
+    private OpOutcome roomOpFail(String opFailure, String roomName, String reason) {
+        return new OpOutcome(opFailure + "|" + roomName + "|" + reason, false);
     }
     
-    private void roomOpRespond(RoomOpOutcome outcome) {
+    private void opRespond(OpOutcome outcome) {
         send(this, outcome.response());
         if (outcome.broadcastRoomsInfo()) {
             broadcast(getRoomsInfoMessage());
@@ -189,22 +209,26 @@ public class Endpoint {
 		return message;
 	}
 	
+	public Session getSession() {
+		return session;
+	}
+	
 	// Helpers
 	
 	/**
 	 * Sends a message to all clients
 	 */
-	private void broadcast(String message) {
+	private static void broadcast(String message) {
 		for(Endpoint connection : connections) {
 			send(connection, message);
 		}
 	}
 
 	/**
-	 * Sends a message to a target client
+	 * Sends a message to a target clients
 	 * @param target is the server endpoint connected to that client. The connection to that client
 	 */
-	private void send(Endpoint target, String message) {
+	private static void send(Endpoint target, String message) {
 		synchronized(target) {
 	        try {
                 target.getSession().getBasicRemote().sendText(message);
@@ -219,7 +243,7 @@ public class Endpoint {
 		System.out.println("Sending Message: " + message);
 	}
 	
-	public Session getSession() {
-		return session;
-	}	
+	private static boolean isValidNickname(String nickname) {
+		return nickname.length() > 0;
+	}
 }

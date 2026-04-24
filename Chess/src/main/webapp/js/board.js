@@ -1,5 +1,5 @@
 function createSquares() {
-	let boardElement = document.getElementById("board");
+	let boardElement = document.getElementById("match-board-inner");
 	for(let i = 0; i < 8; i++) {
 		for(let j = 0; j < 8; j++) {
 			let notation = String.fromCharCode("a".charCodeAt(0) + j) + (8 - i);

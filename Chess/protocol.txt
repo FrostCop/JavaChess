@@ -2,6 +2,10 @@ Every message is a String composed as such:
 OP|DATA
 
 Commands:
+USER_INFO|Nickname
+USER_INFO_SUCC|Nickname
+USER_INFO_FAIL|Nickname|Reason
+
 ROOMS_INFO|Room0Name|Room0ConnectionsCount|Room1Name|Room1ConnectionsCount|...	// Sent by the server to the client with all the rooms
 
 CREATE|RoomName

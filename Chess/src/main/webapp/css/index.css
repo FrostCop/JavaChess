@@ -21,40 +21,48 @@ p {
 	overflow: hidden;
 }
 
-/* View Rooms */
-#view-rooms {
+/* Nickname */
+#nickname {
 	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 10px;
 }
 
-/* Section Title */
-#title {
+/* Rooms */
+#rooms {
+	display: none;
+}
+
+/* Rooms Title */
+#rooms-title-text {
 	padding: 10px;
 	margin: 0;
 }
 
-/* Section Create */
-#section-create {	
+/* Rooms Create */
+#rooms-create {	
 	flex-direction: column;
 	gap: 10px;
 	padding: 10px;
 }
-#create-submit {
+#rooms-create-submit {
 	height: 30px;
 }
 
-/* Section Feedback */
-#feedback {
+/* Rooms Feedback */
+#rooms-feedback-text {
 	display: none;
 	
 	text-align: center;
 	font-style: italic;
 }
 
-/* Section Room List */
-#section-room-list {
+/* Rooms List */
+#rooms-list {
 	padding: 10px;
 }
-#room-list {
+#room-list-inner {
 	width: min(300px, 100%);
 	
 	border-style: solid;
@@ -87,29 +95,30 @@ p {
 	
 	border-style: solid;
 	border-width: 1px;
-}.room-list-entry-occupation{
+}
+.room-list-entry-occupation {
 	padding: 5px;
 }
 
-/* View Game */
-#view-game {
+/* Match */
+#match {
 	display: none;
 }
 
-/* Section Room Info */
-#section-room-info {
+/* Match Info */
+#match-info {
 	flex: 0 0 auto;	/* Takes the space it needs */
 	padding: 10px;
 }
 
-/* Section Board */
-#section-board {
+/* Match Board */
+#match-board {
 	flex: 1;		/* Takes the space remaining after other sections took their space */
 	padding: 10px;
 	
 	container-type: size;
 }
-#board {	
+#match-board-inner {	
 	display: grid;
 	grid-template-rows: repeat(8, 1fr);
 	grid-template-columns: repeat(8, 1fr);
@@ -120,7 +129,7 @@ p {
 }
 @supports (width: 100cqmin) {
 	/* modern browsers that support cqmin: Width and height will be as big as the smallest of them */
-	#board {
+	#match-board-inner {
 		width: 100cqmin;
 		height: 100cqmin;
 		max-width: 100%;
@@ -129,18 +138,18 @@ p {
 }
 @supports not (width: 100cqmin) {
 	/* older browsers fallback: use max width if portrait mode otherwise use max height*/
-	#board {
+	#match-board-inner {
 		aspect-ratio: 1 / 1;
 	}
 	@media (orientation: portrait) {		/* parent is likely width-limited */
-		#board {
+		#match-board-inner {
 			width: 100%;
 			height: auto;
 			max-height: 100%;
 		}
 	}
 	@media (orientation: landscape) {	/* parent is likely height-limited */
-		#board {
+		#match-board-inner {
 			height: 100%;
 			width: auto;
 			max-width: 100%;
