@@ -79,8 +79,8 @@ var view = {
 		let roomsView = document.getElementById("view-rooms");
 		let gameView = document.getElementById("view-game");
 		
-		roomsView.style.display = (toRoomsView ? "block" : "none");
-		gameView.style.display = (toRoomsView ? "none" : "block");
+		roomsView.style.display = (toRoomsView ? "flex" : "none");
+		gameView.style.display = (toRoomsView ? "none" : "flex");
 	},
 
 	setJoinedRoomInfo: function(room) {

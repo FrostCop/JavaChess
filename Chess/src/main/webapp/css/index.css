@@ -1,30 +1,42 @@
+html, body {		/* The body takes the whole page */
+	height: 100%;
+	margin: 0;
+}
+
 p {
 	margin: 0px;
 }
 
-.section {
+.view {		/* Views take the whole viewport and have various sections in column */
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.section {	/* Sections center their items */
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	box-sizing: border-box;	/* Children can't exit the section even with border and padding */
+	overflow: hidden;
 }
 
 /* View Rooms */
 #view-rooms {
-	display: block;
+	display: flex;
 }
 
 /* Section Title */
 #title {
 	padding: 10px;
-	margin: 0px;
+	margin: 0;
 }
 
 /* Section Create */
-#section-create {
-	padding: 10px;
-	
+#section-create {	
 	flex-direction: column;
 	gap: 10px;
+	padding: 10px;
 }
 #create-submit {
 	height: 30px;
@@ -42,9 +54,8 @@ p {
 #section-room-list {
 	padding: 10px;
 }
-
 #room-list {
-	width: 300px;
+	width: min(300px, 100%);
 	
 	border-style: solid;
 	border-width: 1px;
@@ -83,4 +94,65 @@ p {
 /* View Game */
 #view-game {
 	display: none;
+}
+
+/* Section Room Info */
+#section-room-info {
+	flex: 0 0 auto;	/* Takes the space it needs */
+	padding: 10px;
+}
+
+/* Section Board */
+#section-board {
+	flex: 1;		/* Takes the space remaining after other sections took their space */
+	padding: 10px;
+	
+	container-type: size;
+}
+#board {	
+	display: grid;
+	grid-template-rows: repeat(8, 1fr);
+	grid-template-columns: repeat(8, 1fr);
+	
+	border-style: solid;
+	border-width: 5px;
+	border-color: black;
+}
+@supports (width: 100cqmin) {
+	/* modern browsers that support cqmin: Width and height will be as big as the smallest of them */
+	#board {
+		width: 100cqmin;
+		height: 100cqmin;
+		max-width: 100%;
+		max-height: 100%;
+	}
+}
+@supports not (width: 100cqmin) {
+	/* older browsers fallback: use max width if portrait mode otherwise use max height*/
+	#board {
+		aspect-ratio: 1 / 1;
+	}
+	@media (orientation: portrait) {		/* parent is likely width-limited */
+		#board {
+			width: 100%;
+			height: auto;
+			max-height: 100%;
+		}
+	}
+	@media (orientation: landscape) {	/* parent is likely height-limited */
+		#board {
+			height: 100%;
+			width: auto;
+			max-width: 100%;
+		}
+	}
+}
+.square {
+	color: black;
+}
+.dark {
+	background-color: #f2ca5c;
+}
+.light {
+	background-color: #fbf5de;
 }
