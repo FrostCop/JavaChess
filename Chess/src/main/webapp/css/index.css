@@ -86,7 +86,7 @@ p {
 .room-list-entry-join {
 	margin: 7px;
 }
-.room-list-entry-occupation-container {
+.room-list-entry-timerinfo-container, .room-list-entry-freecolorinfo-container  {
 	height: 100%;
 	
 	display: flex;
@@ -96,8 +96,9 @@ p {
 	border-style: solid;
 	border-width: 1px;
 }
-.room-list-entry-occupation {
+.room-list-entry-timerinfo, .room-list-entry-freecolorinfo{
 	padding: 5px;
+	text-wrap: nowrap;
 }
 
 /* Match */

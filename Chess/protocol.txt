@@ -6,10 +6,11 @@ USER_INFO|Nickname
 USER_INFO_SUCC|Nickname
 USER_INFO_FAIL|Nickname|Reason
 
-ROOMS_INFO|Room0Name|Room0ConnectionsCount|Room1Name|Room1ConnectionsCount|...	// Sent by the server to the client with all the rooms
+ROOMS_INFO|Room0Info|Room1Info|...	// Sent by the server to the client with all the rooms
+RoomXInfo is RoomName|FreeColorInfo|TimerInfo
 
 CREATE|RoomName
-CREATE_SUCC|RoomName
+CREATE_SUCC|RoomName|<Tunneled ROOMS_INFO msg>
 CREATE_FAIL|RoomName|Reason
 
 JOIN|RoomName

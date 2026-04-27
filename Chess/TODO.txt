@@ -1,1 +1,2 @@
-Make rooms exist only with a player in them otherwise destroyed. Auto join when creating room
+Auto destroy empty rooms
+Board

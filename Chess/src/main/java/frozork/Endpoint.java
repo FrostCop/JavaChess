@@ -107,8 +107,12 @@ public class Endpoint {
 			opOutcome = handleJoinLeaveRoom(tokens[1], false);
 			break;
 		}
-		if(opOutcome != null)
-			opRespond(opOutcome);
+		if(opOutcome != null) {
+	        send(this, opOutcome.response());
+	        if(opOutcome.roomsStateModified) {
+	            broadcast(getRoomsInfoMessage());
+	        }
+		}
 	}
 	
 	@OnError
@@ -118,7 +122,9 @@ public class Endpoint {
 	}
 	
 	// Ops
-	private OpOutcome handleUserInfo(String nickname) {
+    private record OpOutcome(String response, boolean roomsStateModified) { }
+	
+    private OpOutcome handleUserInfo(String nickname) {
         if (!isValidNickname(nickname)) {
         		return new OpOutcome(OP_USER_INFO_FAIL + "|" + nickname + "|" + "Nickname is not valid", false);
         }
@@ -129,19 +135,23 @@ public class Endpoint {
 
 	private OpOutcome handleCreateRoom(String roomName) {
         if (!Room.isValidRoomName(roomName)) {
-            return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Invalid room name");
+            return new OpOutcome(OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Invalid room name", false);
         }
 
         synchronized (rooms) {
+	        	if(getConnectedRoom() != null) {		// We check at connection level if we are in a room before trying to create a new one
+	    			return new OpOutcome(OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "You are in a room", false);
+	    		}
+	        	
             if (rooms.containsKey(roomName)) {
-                return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Room already exists");
+                return new OpOutcome(OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Room already exists", false);
             }
             if (rooms.size() >= MAX_ROOMS) {
-                return roomOpFail(OP_CREATE_ROOM_FAILURE, roomName, "Max rooms reached");
+                return new OpOutcome(OP_CREATE_ROOM_FAILURE + "|" + roomName + "|" + "Max rooms reached", false);
             }
-
-            rooms.put(roomName, new Room(roomName));
-            return roomOpOk(OP_CREATE_ROOM_SUCESS, roomName);
+            
+            rooms.put(roomName, new Room(roomName, this));
+            return new OpOutcome(OP_CREATE_ROOM_SUCESS + "|" + roomName + "|" + getRoomsInfoMessage(), true);
         }
     }
 	
@@ -150,7 +160,7 @@ public class Endpoint {
         final String opSucc = join ? OP_JOIN_ROOM_SUCCESS : OP_LEAVE_ROOM_SUCCESS;
 
         if (!Room.isValidRoomName(roomName)) {
-            return roomOpFail(opFail, roomName, "Invalid room name");
+            return new OpOutcome(opFail + "|" + roomName + "|" + "Invalid room name", false);
         }
 
         // Minimal lock scope: only lock to FIND the room.
@@ -160,41 +170,42 @@ public class Endpoint {
         }
 
         if (room == null) {
-            return roomOpFail(opFail, roomName, "Room does not exist");
+            return new OpOutcome(opFail + "|" + roomName + "|" + "Room does not exist", false);
         }
 
         if (join) {
+        		if(getConnectedRoom() != null) {	// We check at connection level if we are already in a room before trying to join the new one
+        			return new OpOutcome(opFail + "|" + roomName + "|" + "You are already in a room", false);
+        		}
+        	
             Room.JoinResult joinResult = room.attemptJoin(this);
             if (!joinResult.success()) {
-                return roomOpFail(opFail, roomName, joinResult.failureInfo());
+                return new OpOutcome(opFail + "|" + roomName + "|" + joinResult.failureInfo(), false);
             }
-            return roomOpOk(opSucc, roomName);
+            
+            return new OpOutcome(opSucc + "|" + roomName, true);
         } else {
             Room.LeaveResult leaveResult = room.attemptLeave(this);
             if (!leaveResult.success()) {
-                return roomOpFail(opFail, roomName, leaveResult.failureInfo());
+                return new OpOutcome(opFail + "|" + roomName + "|" + leaveResult.failureInfo(), false);
             }
-            return roomOpOk(opSucc, roomName);
-        }
-    }
-    
-    private record OpOutcome(String response, boolean broadcastRoomsInfo) { }
-    
-    private OpOutcome roomOpOk(String opSuccess, String roomName) {
-        return new OpOutcome(opSuccess + "|" + roomName, true);
-    }
-    
-    private OpOutcome roomOpFail(String opFailure, String roomName, String reason) {
-        return new OpOutcome(opFailure + "|" + roomName + "|" + reason, false);
-    }
-    
-    private void opRespond(OpOutcome outcome) {
-        send(this, outcome.response());
-        if (outcome.broadcastRoomsInfo()) {
-            broadcast(getRoomsInfoMessage());
-        }
-    }
 
+            return new OpOutcome(opSucc + "|" + roomName, true);
+        }
+    }
+    
+    // Helpers
+    
+    private Room getConnectedRoom() {
+        synchronized (rooms) {
+	    		for(String roomName : rooms.keySet()) {
+	    			Room room = rooms.get(roomName);
+	    			if(room.containsConnection(this)) return room;
+	    		}
+        }
+    		return null;
+    }
+    
 	/**
 	 * Composes the rooms info message
 	 */
@@ -213,7 +224,7 @@ public class Endpoint {
 		return session;
 	}
 	
-	// Helpers
+	// Util
 	
 	/**
 	 * Sends a message to all clients

@@ -50,7 +50,7 @@ var view = {
 		roomList.textContent = "";	// We remove all the childs
 	},
 	
-	makeRoomListEntry: function(name, connectionsCount) {
+	makeRoomListEntry: function(name, freeColorInfo, timerInfo) {
 		let roomListEntry = document.createElement("div");
 		roomListEntry.className = "room-list-entry";
 		
@@ -59,13 +59,22 @@ var view = {
 		roomName.innerHTML = name;
 		roomListEntry.appendChild(roomName);
 
-		let roomOccupationContainer = document.createElement("div");
-		roomOccupationContainer.className = "room-list-entry-occupation-container";
-		let roomOccupation = document.createElement("p");
-		roomOccupation.className = "room-list-entry-occupation";
-		roomOccupation.innerHTML = connectionsCount + "/2";
-		roomOccupationContainer.appendChild(roomOccupation);
-		roomListEntry.appendChild(roomOccupationContainer);
+		let roomTimerInfoContainer = document.createElement("div");
+		roomTimerInfoContainer.className = "room-list-entry-timerinfo-container";
+		let roomTimerInfo = document.createElement("p");
+		roomTimerInfo.className = "room-list-entry-timerinfo";
+		roomTimerInfo.innerHTML = timerInfo;
+		roomTimerInfoContainer.appendChild(roomTimerInfo);
+		roomListEntry.appendChild(roomTimerInfoContainer);
+		
+		let roomFreeColorInfoContainer = document.createElement("div");
+		roomFreeColorInfoContainer.className = "room-list-entry-freecolorinfo-container";
+		let roomFreeColorInfo = document.createElement("p");
+		roomFreeColorInfo.className = "room-list-entry-freecolorinfo";
+		roomFreeColorInfo.innerHTML = (freeColorInfo == "White" ? "♔" : "♚");
+		roomFreeColorInfoContainer.appendChild(roomFreeColorInfo);
+		roomListEntry.appendChild(roomFreeColorInfoContainer);
+		
 		let roomJoin = document.createElement("button");
 		roomJoin.className = "room-list-entry-join";
 		roomJoin.onclick = () => endpoint.sendJoinMessage(name);
@@ -121,9 +130,10 @@ var view = {
 
 // State
 class Room {
-	constructor(name, occupations) {
+	constructor(name, freeColorInfo, timerInfo) {
 		this.name = name;
-		this.occupations = occupations;
+		this.freeColorInfo = freeColorInfo;
+		this.timerInfo = timerInfo;
 	}
 }
 
@@ -149,11 +159,11 @@ var state = {
 	},	
 	addRoom: function(room) {
 		this.rooms.push(room);
-		view.makeRoomListEntry(room.name, room.occupations);
+		view.makeRoomListEntry(room.name, room.freeColorInfo, room.timerInfo);
 	},
 	setRooms: function(rooms) {
 		this.clearRooms();
-		rooms.forEach(room => this.addRoom(new Room(room.name, room.occupations)));
+		rooms.forEach(room => this.addRoom(new Room(room.name, room.freeColorInfo, room.timerInfo)));
 	},
 	
 	joinRoom: function(roomName) {
@@ -204,17 +214,16 @@ var endpoint = {
 				endpoint.handleUserInfoSuccess(tokens[1]);
 				break;
 			case OP_ROOMS_INFO:
-				let rooms = [];
-				for(let t = 1; t + 1 < tokens.length; t += 2) // Foreach token after the first
-					rooms.push(new Room(tokens[t], tokens[t + 1])); // We get the room name and the room connections count				
-				endpoint.handleRoomsInfo(rooms);
+				endpoint.handleRoomsInfo(buildRoomsInfoFromTokens(tokens));
 				break;				
 			case OP_CREATE_ROOM_FAILURE:
 				endpoint.handleCreateRoomFailure(tokens[1], tokens[2]);
-				break;				
+				break;
 			case OP_CREATE_ROOM_SUCESS:
-				endpoint.handleCreateRoomSuccess(tokens[1]);
-				break;				
+				let roomName = tokens[1];
+				let tunneledRoomsInfo = buildRoomsInfoFromTokens(tokens.slice(2)); // The create rooms success has a tunnelling of the rooms info message, so we extract it
+				endpoint.handleCreateRoomSuccess(roomName, tunneledRoomsInfo);
+				break;
 			case OP_JOIN_ROOM_FAILURE:
 				endpoint.handleJoinRoomFailure(tokens[1], tokens[2]);
 				break;				
@@ -241,8 +250,10 @@ var endpoint = {
 	handleCreateRoomFailure: function(roomName, reason) {
 		endpoint.showMessageFeedback("Creation failure of room \"" + roomName  + "\" because<br>" + reason);	
 	},
-	handleCreateRoomSuccess: function(roomName) {
+	handleCreateRoomSuccess: function(roomName, roomsInfo) {
 		endpoint.showMessageFeedback("Creation success of room \"" + roomName + "\"");
+		this.handleRoomsInfo(roomsInfo);	// We handle the tunneled rooms info first to avoid problems with the auto join
+		state.joinRoom(roomName);	// When we create we auto join that
 	},
 	handleJoinRoomFailure: function(roomName, reason) {
 		endpoint.showMessageFeedback("Join failure of room \"" + roomName  + "\" because<br>" + reason);
@@ -275,6 +286,12 @@ var endpoint = {
 	sendJoinMessage: function(roomName) {
 		this.send(OP_JOIN_ROOM + "|" + roomName);
 	}
+}
+function buildRoomsInfoFromTokens(tokens) {	// Helper
+	let rooms = [];
+	for(let t = 1; t + 2 < tokens.length; t += 3) // Foreach token after the first
+		rooms.push(new Room(tokens[t], tokens[t + 1], tokens[t + 2])); // We get the room all the info	
+	return rooms;
 }
 
 view.init();
